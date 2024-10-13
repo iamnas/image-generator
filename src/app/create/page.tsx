@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button"
 import {
     Form,
     FormControl,
-    FormDescription,
+    // FormDescription,
     FormField,
     FormItem,
-    FormLabel,
+    // FormLabel,
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
@@ -16,10 +16,12 @@ import React, { useState } from 'react'
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
+import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
 
 
 const formSchema = z.object({
-    inputPrompt: z.string().min(7, {
+    prompt: z.string().min(7, {
         message: "must be at least 7 characters.",
     }).max(50),
 })
@@ -27,21 +29,43 @@ const formSchema = z.object({
 export default function Page() {
 
     const [outputImg, setOutputImg] = useState<string | null>(null)
-    const [inputPrompt, setInputPrompt] = useState('');
+
     const [loading, setLoading] = useState(false);
+    const { toast } = useToast()
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            inputPrompt: "",
+            prompt: "",
         },
     })
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
+    async function onSubmit(values: z.infer<typeof formSchema>) {
         // Do something with the form values.
         // ✅ This will be type-safe and validated.
 
-        console.log(values)
+        try {
+            setLoading(true);
+            const res = await fetch('/api/images', {
+                method: 'POST',
+                body: JSON.stringify(values),
+            })
+
+            const data = await res.json()
+
+            if (res.status === 200) {
+                setOutputImg(data?.url)
+            } else {
+                toast({ variant: "destructive", description: data.error })
+            }
+
+        } catch (error) {
+            console.error(error)
+            toast({ variant: "destructive", description: 'Something went wrong' })
+
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
@@ -62,27 +86,26 @@ export default function Page() {
                             <form onSubmit={form.handleSubmit(onSubmit)} className="w-full  flex gap-2 ">
                                 <FormField
                                     control={form.control}
-                                    name="inputPrompt"
+                                    name="prompt"
                                     render={({ field }) => (
                                         <FormItem className="w-full max-w-[70%] ">
                                             <FormControl>
                                                 <Input placeholder='a cat sitting over a sofa ...' className="border border-white transition-all" {...field} />
                                             </FormControl>
-                                            {/* <FormDescription>
-                                                This is your public display name.
-                                            </FormDescription> */}
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <Button type="submit">Generate</Button>
+                                <Button loading={loading} type="submit">Generate</Button>
                             </form>
                         </Form>
-
-                        {/* <Button> Generate </Button> */}
                     </div>
                 </div>
-                <div className='__output flex-[1] bg-white/5 rounded-lg'>
+                <div className='__output flex-[1] bg-white/5 rounded-lg relative overflow-hidden'>
+                    {outputImg ? <Image className="w-full h-full object-contain" src={outputImg} alt="GENAI" width={300} height={300} /> :
+                        <div className="w-full h-full flex justify-center items-center text-white/70 text-center p-3">
+                            Enter your prompt and hit generate!
+                        </div>}
                 </div>
             </div>
         </div>

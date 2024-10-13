@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { TbLoader3 } from "react-icons/tb";
 
@@ -20,7 +20,7 @@ export default function Header() {
     }, [session, status])
 
     return (
-        <div className="fixed top-0 w-full h-[60px] bg-black border-b border-white/60 p-3 flex justify-between items-center">
+        <div className="fixed top-0 w-full h-[60px] bg-black border-b border-white/60 p-3 flex justify-between items-center z-50">
 
             <Link href={'/'}>
                 <h2 className="font-bold text-xl"> Gen AI</h2>
@@ -30,10 +30,19 @@ export default function Header() {
                     <Button onClick={() => signIn("google")}>Login</Button>
                 </div>)
                 :
-                (<Avatar>
-                    <AvatarImage src={session.user?.image || ''} />
-                    <AvatarFallback>CN</AvatarFallback>
-                </Avatar>)
+                (
+                    <div className="flex gap-3 justify-center items-center">
+                        <Button onClick={() => signOut()} variant={"destructive"}>
+                            Logout
+                        </Button>
+                        <Link href={'/profile'}>
+                            <Avatar>
+                                <AvatarImage src={session.user?.image || ''} />
+                                <AvatarFallback>G</AvatarFallback>
+                            </Avatar>
+                        </Link>
+                    </div>
+                )
             }
         </div>
     )

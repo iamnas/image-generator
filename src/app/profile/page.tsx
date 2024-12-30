@@ -1,83 +1,8 @@
-// "use client";
-// import { AnimatePresence, motion } from 'framer-motion';
-// import Image from 'next/image';
-// import React, { useEffect, useState } from 'react';
-// import { Loader2 } from 'lucide-react';
-// import { Post } from '@prisma/client';
-
-// export default function Page() {
-//     const [loading, setLoading] = useState(true);
-//     // Specify the type as Post[] | undefined
-//     const [postData, setPostData] = useState<Post[]>();
-
-//     const fetchpost = async () => {
-//         try {
-//             const res = await fetch(`/api/images`);
-//             const data = await res.json();
-//             setPostData(data.postData);
-//         } catch (error) {
-//             console.error('Failed to fetch posts:', error);
-//         }
-//     };
-
-//     useEffect(() => {
-//         try {
-//             setLoading(true);
-//             fetchpost();
-//         } catch (error) {
-//             console.error(error);
-//         } finally {
-//             setLoading(false);
-//         }
-//     }, []);
-
-//     return (
-//         <div className='w-full gap-3 min-h-dvh p-3 pt-[72px] grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))]'>
-//             {loading ? (
-//                 <div className="col-span-full flex justify-center items-center">
-//                     <Loader2 className="animate-spin text-purple-500 h-8 w-8" />
-//                 </div>
-//             ) : (
-//                 <AnimatePresence mode="wait">
-//                     {postData?.map((data, index) => (
-//                         <motion.div
-//                             initial={{
-//                                 opacity: 0,
-//                                 scale: 0.95,
-//                                 filter: "blur(10px)"
-//                             }}
-//                             animate={{
-//                                 opacity: 1,
-//                                 scale: 1,
-//                                 filter: "blur(0px)"
-//                             }}
-//                             transition={{ duration: 0.35, delay: index * 0.05 }}
-//                             key={data.id}
-//                             className='group w-full h-full bg-gray-900/50 hover:bg-gray-900/80 backdrop-blur-sm p-2.5 rounded-lg border border-purple-500/20 hover:border-purple-500/40 transition-colors'
-//                         >
-//                             <div className='relative aspect-square mb-2 overflow-hidden rounded-md'>
-//                                 <Image 
-//                                     src={data.url} 
-//                                     alt={data.prompt} 
-//                                     fill
-//                                     className='object-cover group-hover:scale-105 transition-transform duration-300'
-//                                 />
-//                             </div>
-//                             <p className='text-gray-400 group-hover:text-white/90 text-sm transition-colors line-clamp-2'>
-//                                 {data.prompt}
-//                             </p>
-//                         </motion.div>
-//                     ))}
-//                 </AnimatePresence>
-//             )}
-//         </div>
-//     );
-// }
 "use client";
-import { AnimatePresence, motion, useMotionValue } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import Image from 'next/image';
 import React, { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Layout } from 'lucide-react';
 
 interface Post {
   id: string;
@@ -89,30 +14,62 @@ interface Post {
   updatedAt: string;
 }
 
-const DraggableImage = ({ data, index }: { data: Post; index: number }) => {
+const DraggableImage = ({ 
+  data, 
+  index, 
+  isArranged 
+}: { 
+  data: Post; 
+  index: number;
+  isArranged: boolean;
+}) => {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const dragX = useMotionValue(0);
-  const dragY = useMotionValue(0);
+
+  // Calculate grid position
+  const getGridPosition = () => {
+    const gap = 24;
+    const width = 300 + gap;
+    const columns = Math.floor((window.innerWidth - 32) / width) || 1;
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    return {
+      x: column * width,
+      y: row * width
+    };
+  };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="relative"
+      initial={false}
+      animate={isArranged ? getGridPosition() : position}
+      transition={{
+        type: "spring",
+        damping: 20,
+        stiffness: 100
+      }}
+      drag={!isArranged}
+      dragMomentum={false}
+      onDragStart={() => setIsDragging(true)}
+      onDragEnd={(_, info) => {
+        setIsDragging(false);
+        if (!isArranged) {
+          setPosition({
+            x: position.x + info.offset.x,
+            y: position.y + info.offset.y
+          });
+        }
+      }}
+      className={`absolute ${
+        isDragging ? 'z-50' : 'z-0'
+      }`}
     >
-      <motion.div
-        drag
-        dragSnapToOrigin
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={() => setIsDragging(false)}
-        style={{ x: dragX, y: dragY }}
-        whileDrag={{ scale: 1.05, zIndex: 50 }}
-        className={`bg-gray-900 rounded-xl overflow-hidden transition-shadow ${
-          isDragging ? 'shadow-2xl cursor-grabbing z-50' : 'cursor-grab hover:shadow-lg'
+      <div 
+        className={`bg-gray-900 rounded-xl overflow-hidden transition-all duration-200 ${
+          isDragging ? 'shadow-2xl scale-105 cursor-grabbing' : 'shadow hover:shadow-lg cursor-grab'
         }`}
       >
-        <div className="relative aspect-square">
+        <div className="relative w-[300px] aspect-square">
           <Image
             src={data.url}
             alt={data.prompt}
@@ -125,7 +82,7 @@ const DraggableImage = ({ data, index }: { data: Post; index: number }) => {
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
     </motion.div>
   );
 };
@@ -133,6 +90,7 @@ const DraggableImage = ({ data, index }: { data: Post; index: number }) => {
 export default function Page() {
   const [loading, setLoading] = useState(true);
   const [postData, setPostData] = useState<Post[]>();
+  const [isArranged, setIsArranged] = useState(false);
 
   const fetchpost = async () => {
     try {
@@ -157,15 +115,31 @@ export default function Page() {
 
   return (
     <div className="container mx-auto px-4 pt-[72px] min-h-screen">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Image Gallery</h1>
+        <button
+          onClick={() => setIsArranged(!isArranged)}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors"
+        >
+          <Layout className="w-4 h-4" />
+          {isArranged ? 'Free Move' : 'Rearrange'}
+        </button>
+      </div>
+
       {loading ? (
         <div className="flex justify-center items-center min-h-[50vh]">
           <Loader2 className="animate-spin text-purple-500 h-8 w-8" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 py-8">
-          <AnimatePresence mode="wait">
+        <div className="relative min-h-[80vh]">
+          <AnimatePresence>
             {postData?.map((data, index) => (
-              <DraggableImage key={data.id} data={data} index={index} />
+              <DraggableImage 
+                key={data.id} 
+                data={data} 
+                index={index}
+                isArranged={isArranged}
+              />
             ))}
           </AnimatePresence>
         </div>

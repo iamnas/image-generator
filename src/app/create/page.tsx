@@ -28,6 +28,7 @@ export default function Page() {
 
     const [outputImg, setOutputImg] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
+
     const { toast } = useToast()
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -39,21 +40,24 @@ export default function Page() {
 
     useEffect(() => {
         if (status === "unauthenticated") {
-          router.push("/login")
+            router.push("/login")
         }
     }, [status, router])
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
+        if (loading) return;
         try {
             setLoading(true)
             const res = await fetch('/api/images', {
                 method: 'POST',
                 body: JSON.stringify(values),
             })
+            form.reset()
             const data = await res.json()
             if (res.status === 200) {
                 setOutputImg(data?.url)
                 toast({ description: 'Image generated successfully!' })
+                form.reset()
             } else {
                 toast({ variant: "destructive", description: data.error })
             }
@@ -107,8 +111,13 @@ export default function Page() {
                                     <Button
                                         type="submit"
                                         size="lg"
-                                        className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 group"
+                                        // className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 group"
+
+                                        className={`w-full bg-gradient-to-r from-purple-500 to-pink-500 ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:from-purple-600 hover:to-pink-600'
+                                            } group`}
                                         disabled={loading}
+                                        aria-disabled={loading}
+
                                     >
                                         <Wand2 className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
                                         {loading ? 'Creating Magic...' : 'Generate Image'}
